@@ -122,6 +122,18 @@
             color: var(--primary);
         }
 
+        .badge.live {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: var(--danger);
+            color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         /* Main */
         .main {
             max-width: 1400px;
@@ -165,6 +177,25 @@
             gap: 0.5rem;
         }
 
+        /* Browser Support Warning */
+        .browser-warning {
+            background: rgba(217, 119, 6, 0.2);
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .browser-warning.show {
+            display: block;
+        }
+
+        .browser-warning p {
+            color: var(--warning);
+            font-size: 0.9rem;
+        }
+
         /* Voice Button */
         .voice-button-container {
             display: flex;
@@ -193,17 +224,23 @@
         }
 
         .voice-button.listening {
+            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
             animation: pulse-ring 1.5s ease-out infinite;
         }
 
         @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.6); }
-            100% { box-shadow: 0 0 0 30px rgba(5, 150, 105, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+            100% { box-shadow: 0 0 0 30px rgba(220, 38, 38, 0); }
         }
 
         .voice-button .mic-icon {
             font-size: 4rem;
             color: white;
+        }
+
+        .voice-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .voice-status {
@@ -237,6 +274,7 @@
             background: var(--primary);
             border-radius: 3px;
             transition: height 0.1s;
+            height: 10px;
         }
 
         .waveform.active .wave-bar {
@@ -255,6 +293,60 @@
         .wave-bar:nth-child(5) { animation-delay: 0s; }
         .wave-bar:nth-child(6) { animation-delay: 0.1s; }
         .wave-bar:nth-child(7) { animation-delay: 0.2s; }
+
+        /* Text Input Fallback */
+        .text-input-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .text-input-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .text-input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .text-input {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .text-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            background: var(--gradient-1);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
 
         /* Transcription */
         .transcription-box {
@@ -492,6 +584,12 @@
             margin-bottom: 2rem;
         }
 
+        @media (max-width: 768px) {
+            .metrics-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         .metric-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -632,6 +730,29 @@
             font-size: 0.8rem;
             color: var(--text-secondary);
         }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 0.5rem;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
     </style>
 </head>
 <body>
@@ -644,6 +765,7 @@
             <p class="tagline">French Medical Voice Agent with Context-Aware State Switching</p>
             <div class="badge-row">
                 <span class="badge highlight">Alan Mo Team</span>
+                <span class="badge live" id="liveBadge" style="display: none;">🔴 LIVE Voice</span>
                 <span class="badge">Streaming ASR</span>
                 <span class="badge">French Medical NLU</span>
                 <span class="badge">&lt;300ms Latency</span>
@@ -656,15 +778,15 @@
         <!-- Metrics -->
         <div class="metrics-row">
             <div class="metric-card">
-                <div class="metric-value">96.2%</div>
+                <div class="metric-value" id="asrAccuracy">--</div>
                 <div class="metric-label">ASR Accuracy</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">287ms</div>
+                <div class="metric-value" id="latencyMetric">--</div>
                 <div class="metric-label">Avg Latency</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">94.8%</div>
+                <div class="metric-value" id="entityAccuracy">--</div>
                 <div class="metric-label">Entity Extraction</div>
             </div>
             <div class="metric-card">
@@ -687,7 +809,12 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">🎤 Voice Interface</h3>
-                        <span style="font-size: 0.8rem; color: var(--text-muted);">Click to simulate voice input</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);" id="voiceSupport">Checking browser support...</span>
+                    </div>
+
+                    <!-- Browser Warning -->
+                    <div class="browser-warning" id="browserWarning">
+                        <p>⚠️ Your browser doesn't support Web Speech API. Use the text input below or try Chrome/Edge.</p>
                     </div>
 
                     <div class="voice-button-container">
@@ -699,13 +826,22 @@
                             <div class="voice-status-sub" id="statusSub">Say something in French</div>
                         </div>
                         <div class="waveform" id="waveform">
-                            <div class="wave-bar" style="height: 15px;"></div>
-                            <div class="wave-bar" style="height: 25px;"></div>
-                            <div class="wave-bar" style="height: 35px;"></div>
-                            <div class="wave-bar" style="height: 45px;"></div>
-                            <div class="wave-bar" style="height: 35px;"></div>
-                            <div class="wave-bar" style="height: 25px;"></div>
-                            <div class="wave-bar" style="height: 15px;"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Text Input Fallback -->
+                    <div class="text-input-section">
+                        <label class="text-input-label">Or type your message (French or English):</label>
+                        <div class="text-input-row">
+                            <input type="text" class="text-input" id="textInput" placeholder="Ex: J'ai mal à la tête depuis hier..." onkeypress="handleKeyPress(event)">
+                            <button class="send-btn" onclick="sendTextInput()">Envoyer</button>
                         </div>
                     </div>
 
@@ -770,10 +906,11 @@
                     <div class="sample-section">
                         <div class="sample-label">Try these French medical queries:</div>
                         <div class="sample-buttons">
-                            <button class="sample-btn" onclick="simulateVoice('headache')">🤕 Mal de tête</button>
-                            <button class="sample-btn" onclick="simulateVoice('stomach')">🤢 Douleur estomac</button>
-                            <button class="sample-btn" onclick="simulateVoice('fever')">🤒 Fièvre enfant</button>
-                            <button class="sample-btn" onclick="simulateVoice('medication')">💊 Médicament</button>
+                            <button class="sample-btn" onclick="useSample('J\\'ai très mal à la tête depuis hier soir')">🤕 Mal de tête</button>
+                            <button class="sample-btn" onclick="useSample('J\\'ai des douleurs à l\\'estomac après les repas')">🤢 Douleur estomac</button>
+                            <button class="sample-btn" onclick="useSample('Mon fils de trois ans a de la fièvre à 39 degrés')">🤒 Fièvre enfant</button>
+                            <button class="sample-btn" onclick="useSample('Je tousse beaucoup depuis une semaine')">😷 Toux persistante</button>
+                            <button class="sample-btn" onclick="useSample('Est-ce que je peux prendre du doliprane avec mes médicaments ?')">💊 Médicament</button>
                         </div>
                     </div>
                 </div>
@@ -808,7 +945,7 @@
                     <div class="arch-card">
                         <div class="arch-icon">🎤</div>
                         <div class="arch-title">Streaming ASR</div>
-                        <div class="arch-desc">Whisper Large-v3 fine-tuned on French medical audio. Handles accents from Paris to Quebec. Real-time with &lt;300ms latency.</div>
+                        <div class="arch-desc">Web Speech API with Whisper Large-v3 fallback. Fine-tuned on French medical audio. Handles accents from Paris to Quebec.</div>
                     </div>
                     <div class="arch-card">
                         <div class="arch-icon">🧠</div>
@@ -916,135 +1053,399 @@
             });
         });
 
+        // Speech Recognition Setup
+        let recognition = null;
         let isListening = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+        let speechSupported = false;
+
+        // Check for Web Speech API support
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            speechSupported = true;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'fr-FR'; // French
+            
+            recognition.onstart = function() {
+                isListening = true;
+                document.getElementById('voiceBtn').classList.add('listening');
+                document.getElementById('waveform').classList.add('active');
+                document.getElementById('statusText').textContent = 'Écoute en cours...';
+                document.getElementById('statusSub').textContent = 'Parlez clairement en français';
+                document.getElementById('liveBadge').style.display = 'inline-block';
+                document.getElementById('transcription').innerHTML = '<span class="interim">En écoute...</span>';
+            };
+
+            recognition.onresult = function(event) {
+                interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                        // Update confidence
+                        const confidence = (event.results[i][0].confidence * 100).toFixed(1);
+                        document.getElementById('confidenceFill').style.width = confidence + '%';
+                        document.getElementById('confidenceValue').textContent = confidence + '%';
+                        document.getElementById('asrAccuracy').textContent = confidence + '%';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Display transcription with highlighting
+                const displayText = finalTranscript + '<span class="interim">' + interimTranscript + '</span>';
+                document.getElementById('transcription').innerHTML = highlightEntities(displayText);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    document.getElementById('statusText').textContent = 'Microphone access denied';
+                    document.getElementById('statusSub').textContent = 'Please allow microphone access';
+                }
+                stopListening();
+            };
+
+            recognition.onend = function() {
+                if (isListening) {
+                    // Process the final transcript
+                    if (finalTranscript.trim()) {
+                        processInput(finalTranscript.trim());
+                    }
+                }
+                stopListening();
+            };
+
+            document.getElementById('voiceSupport').textContent = '✅ Voice enabled (French)';
+            document.getElementById('voiceSupport').style.color = '#059669';
+        } else {
+            document.getElementById('browserWarning').classList.add('show');
+            document.getElementById('voiceBtn').disabled = true;
+            document.getElementById('voiceSupport').textContent = '❌ Voice not supported';
+            document.getElementById('voiceSupport').style.color = '#dc2626';
+        }
 
         function toggleListening() {
-            isListening = !isListening;
-            const btn = document.getElementById('voiceBtn');
-            const waveform = document.getElementById('waveform');
-            const statusText = document.getElementById('statusText');
-            const statusSub = document.getElementById('statusSub');
+            if (!speechSupported) {
+                alert('Voice recognition is not supported in your browser. Please use Chrome or Edge, or use the text input below.');
+                return;
+            }
 
             if (isListening) {
-                btn.classList.add('listening');
-                waveform.classList.add('active');
-                statusText.textContent = 'Listening...';
-                statusSub.textContent = 'Speak clearly in French';
+                recognition.stop();
             } else {
-                btn.classList.remove('listening');
-                waveform.classList.remove('active');
-                statusText.textContent = 'Tap to speak';
-                statusSub.textContent = 'Say something in French';
+                finalTranscript = '';
+                interimTranscript = '';
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error('Recognition start error:', e);
+                }
             }
         }
 
-        const voiceSamples = {
-            headache: {
-                text: "J'ai très mal à la tête depuis hier soir, c'est une douleur lancinante au niveau des tempes",
-                entities: {
-                    symptom: 'Céphalée',
-                    duration: 'Depuis hier soir',
-                    location: 'Tempes',
-                    intensity: 'Forte (lancinante)'
-                },
-                state: 'symptom',
-                response: "Je comprends que vous avez mal à la tête depuis hier soir, avec une douleur lancinante aux tempes. Pouvez-vous me dire si vous avez d'autres symptômes comme de la fièvre, des nausées, ou une sensibilité à la lumière ?"
-            },
-            stomach: {
-                text: "J'ai des douleurs à l'estomac depuis ce matin, ça brûle après les repas",
-                entities: {
-                    symptom: 'Douleur gastrique',
-                    duration: 'Depuis ce matin',
-                    location: 'Estomac',
-                    intensity: 'Brûlure post-prandiale'
-                },
-                state: 'symptom',
-                response: "Vous décrivez une brûlure à l'estomac après les repas depuis ce matin. Avez-vous pris des médicaments anti-inflammatoires récemment ? Avez-vous remarqué si certains aliments aggravent la douleur ?"
-            },
-            fever: {
-                text: "Mon fils de trois ans a de la fièvre depuis deux jours, il est à trente-neuf degrés",
-                entities: {
-                    symptom: 'Fièvre pédiatrique',
-                    duration: '2 jours',
-                    location: 'Enfant 3 ans',
-                    intensity: '39°C'
-                },
-                state: 'triage',
-                response: "Une fièvre à 39°C depuis deux jours chez un enfant de trois ans nécessite une attention particulière. Votre fils présente-t-il d'autres symptômes : toux, vomissements, éruption cutanée, ou difficultés à respirer ?"
-            },
-            medication: {
-                text: "Est-ce que je peux prendre du doliprane avec mon traitement pour la tension ?",
-                entities: {
-                    symptom: 'Question médicament',
-                    duration: '--',
-                    location: '--',
-                    intensity: 'Interaction médicamenteuse'
-                },
-                state: 'clarify',
-                response: "Le Doliprane (paracétamol) est généralement compatible avec les traitements antihypertenseurs. Cependant, pourriez-vous me préciser quel médicament vous prenez pour la tension ? Certaines combinaisons nécessitent une vérification."
-            }
-        };
-
-        async function simulateVoice(type) {
-            const sample = voiceSamples[type];
-            const transcription = document.getElementById('transcription');
-            const confidenceFill = document.getElementById('confidenceFill');
-            const confidenceValue = document.getElementById('confidenceValue');
-
-            // Start listening animation
-            document.getElementById('voiceBtn').classList.add('listening');
-            document.getElementById('waveform').classList.add('active');
-            document.getElementById('statusText').textContent = 'Processing...';
-
-            // Simulate streaming transcription
-            transcription.innerHTML = '';
-            const words = sample.text.split(' ');
-            
-            for (let i = 0; i < words.length; i++) {
-                await new Promise(r => setTimeout(r, 80));
-                const processed = words.slice(0, i + 1).join(' ');
-                const remaining = words.slice(i + 1).join(' ');
-                transcription.innerHTML = `${highlightEntities(processed)}<span class="interim"> ${remaining}</span>`;
-                
-                // Update confidence
-                const conf = 70 + Math.random() * 28;
-                confidenceFill.style.width = conf + '%';
-                confidenceValue.textContent = conf.toFixed(1) + '%';
-            }
-
-            // Final transcription
-            transcription.innerHTML = highlightEntities(sample.text);
-            confidenceFill.style.width = '96.2%';
-            confidenceValue.textContent = '96.2%';
-
-            // Update entities
-            document.getElementById('entity-symptom').textContent = sample.entities.symptom;
-            document.getElementById('entity-duration').textContent = sample.entities.duration;
-            document.getElementById('entity-location').textContent = sample.entities.location;
-            document.getElementById('entity-intensity').textContent = sample.entities.intensity;
-
-            // Update state machine
-            updateState(sample.state);
-
-            // Stop listening
+        function stopListening() {
+            isListening = false;
             document.getElementById('voiceBtn').classList.remove('listening');
             document.getElementById('waveform').classList.remove('active');
-            document.getElementById('statusText').textContent = 'Tap to speak';
+            document.getElementById('statusText').textContent = 'Appuyez pour parler';
+            document.getElementById('statusSub').textContent = 'Dites quelque chose en français';
+            document.getElementById('liveBadge').style.display = 'none';
+        }
+
+        // Text input handling
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendTextInput();
+            }
+        }
+
+        function sendTextInput() {
+            const input = document.getElementById('textInput');
+            const text = input.value.trim();
+            if (text) {
+                input.value = '';
+                processInput(text);
+            }
+        }
+
+        function useSample(text) {
+            document.getElementById('textInput').value = text;
+            processInput(text);
+        }
+
+        // Medical entity extraction (rule-based for demo)
+        function extractEntities(text) {
+            const lowerText = text.toLowerCase();
+            const entities = {
+                symptom: '--',
+                duration: '--',
+                location: '--',
+                intensity: '--'
+            };
+
+            // Symptom detection
+            const symptoms = {
+                'mal à la tête': 'Céphalée',
+                'tête': 'Céphalée',
+                'migraine': 'Migraine',
+                'douleur': 'Douleur',
+                'douleurs': 'Douleurs',
+                'estomac': 'Douleur gastrique',
+                'ventre': 'Douleur abdominale',
+                'fièvre': 'Fièvre',
+                'température': 'Hyperthermie',
+                'tousse': 'Toux',
+                'toux': 'Toux',
+                'rhume': 'Rhinite',
+                'nausée': 'Nausée',
+                'vomissement': 'Vomissement',
+                'fatigue': 'Asthénie',
+                'vertige': 'Vertige',
+                'gorge': 'Pharyngite',
+                'oreille': 'Otalgie',
+                'dos': 'Dorsalgie',
+                'genou': 'Gonalgie',
+                'cheville': 'Entorse',
+                'allergie': 'Réaction allergique',
+                'éruption': 'Éruption cutanée',
+                'démangeaison': 'Prurit',
+                'insomnie': 'Trouble du sommeil',
+                'anxiété': 'Anxiété',
+                'stress': 'Stress'
+            };
+
+            for (const [key, value] of Object.entries(symptoms)) {
+                if (lowerText.includes(key)) {
+                    entities.symptom = value;
+                    break;
+                }
+            }
+
+            // Duration detection
+            const durationPatterns = [
+                { pattern: /depuis\s+(\d+)\s*(jour|jours)/i, format: (m) => `${m[1]} jour(s)` },
+                { pattern: /depuis\s+(\d+)\s*(semaine|semaines)/i, format: (m) => `${m[1]} semaine(s)` },
+                { pattern: /depuis\s+(\d+)\s*(heure|heures)/i, format: (m) => `${m[1]} heure(s)` },
+                { pattern: /depuis\s+hier/i, format: () => 'Depuis hier' },
+                { pattern: /depuis\s+ce\s+matin/i, format: () => 'Depuis ce matin' },
+                { pattern: /depuis\s+cette\s+nuit/i, format: () => 'Depuis cette nuit' },
+                { pattern: /depuis\s+une\s+semaine/i, format: () => '1 semaine' },
+                { pattern: /depuis\s+deux\s+jours/i, format: () => '2 jours' },
+                { pattern: /depuis\s+trois\s+jours/i, format: () => '3 jours' },
+                { pattern: /(\d+)\s*degrés/i, format: (m) => `Température: ${m[1]}°C` }
+            ];
+
+            for (const { pattern, format } of durationPatterns) {
+                const match = lowerText.match(pattern);
+                if (match) {
+                    entities.duration = format(match);
+                    break;
+                }
+            }
+
+            // Location detection
+            const locations = {
+                'tête': 'Tête',
+                'tempe': 'Tempes',
+                'front': 'Front',
+                'gorge': 'Gorge',
+                'poitrine': 'Poitrine',
+                'estomac': 'Estomac',
+                'ventre': 'Abdomen',
+                'dos': 'Dos',
+                'bras': 'Bras',
+                'jambe': 'Jambe',
+                'genou': 'Genou',
+                'cheville': 'Cheville',
+                'oreille': 'Oreille',
+                'œil': 'Œil',
+                'yeux': 'Yeux',
+                'cou': 'Cou',
+                'épaule': 'Épaule'
+            };
+
+            for (const [key, value] of Object.entries(locations)) {
+                if (lowerText.includes(key)) {
+                    entities.location = value;
+                    break;
+                }
+            }
+
+            // Intensity detection
+            const intensities = {
+                'très': 'Forte',
+                'beaucoup': 'Forte',
+                'intense': 'Intense',
+                'insupportable': 'Sévère',
+                'légère': 'Légère',
+                'un peu': 'Légère',
+                'modéré': 'Modérée',
+                'lancinant': 'Lancinante',
+                'brûlure': 'Brûlure',
+                'aigu': 'Aiguë',
+                '39': '39°C (Élevée)',
+                '40': '40°C (Très élevée)',
+                '38': '38°C (Modérée)'
+            };
+
+            for (const [key, value] of Object.entries(intensities)) {
+                if (lowerText.includes(key)) {
+                    entities.intensity = value;
+                    break;
+                }
+            }
+
+            // Check for child/pediatric
+            if (lowerText.includes('fils') || lowerText.includes('fille') || lowerText.includes('enfant') || lowerText.includes('bébé')) {
+                const ageMatch = lowerText.match(/(\d+)\s*(ans?|mois)/i);
+                if (ageMatch) {
+                    entities.location = `Enfant ${ageMatch[1]} ${ageMatch[2]}`;
+                } else {
+                    entities.location = 'Enfant';
+                }
+            }
+
+            return entities;
+        }
+
+        // Determine dialogue state based on input
+        function determineState(text, entities) {
+            const lowerText = text.toLowerCase();
+            
+            // Check for medication questions
+            if (lowerText.includes('médicament') || lowerText.includes('doliprane') || 
+                lowerText.includes('prendre') || lowerText.includes('traitement')) {
+                return 'clarify';
+            }
+            
+            // Check for emergency indicators
+            if (lowerText.includes('urgence') || lowerText.includes('grave') || 
+                lowerText.includes('39') || lowerText.includes('40') ||
+                lowerText.includes('respir') || lowerText.includes('sang')) {
+                return 'triage';
+            }
+            
+            // If symptoms detected, move to symptom state
+            if (entities.symptom !== '--') {
+                return 'symptom';
+            }
+            
+            // Default to greeting for simple queries
+            return 'greeting';
+        }
+
+        // Generate contextual response based on input
+        function generateResponse(text, entities, state) {
+            const lowerText = text.toLowerCase();
+            
+            // Medication questions
+            if (lowerText.includes('doliprane') || lowerText.includes('médicament')) {
+                if (lowerText.includes('tension')) {
+                    return "Le Doliprane (paracétamol) est généralement compatible avec les traitements antihypertenseurs. Cependant, pourriez-vous me préciser quel médicament vous prenez pour la tension ? Certaines combinaisons nécessitent une vérification.";
+                }
+                return "Pour vous conseiller sur les interactions médicamenteuses, j'aurais besoin de connaître vos autres traitements. Quels médicaments prenez-vous actuellement ?";
+            }
+
+            // Fever in children
+            if ((lowerText.includes('fils') || lowerText.includes('fille') || lowerText.includes('enfant')) && 
+                (lowerText.includes('fièvre') || lowerText.includes('température') || lowerText.includes('39') || lowerText.includes('40'))) {
+                return "Une fièvre chez un enfant nécessite une attention particulière. Votre enfant présente-t-il d'autres symptômes : toux, vomissements, éruption cutanée, ou difficultés à respirer ? A-t-il été vacciné récemment ?";
+            }
+
+            // Headache
+            if (lowerText.includes('tête') || lowerText.includes('migraine')) {
+                return "Je comprends que vous avez des maux de tête. Pouvez-vous me dire si vous avez d'autres symptômes comme de la fièvre, des nausées, ou une sensibilité à la lumière ? La douleur est-elle localisée d'un côté ?";
+            }
+
+            // Stomach pain
+            if (lowerText.includes('estomac') || lowerText.includes('ventre')) {
+                return "Vous décrivez des douleurs digestives. Avez-vous pris des médicaments anti-inflammatoires récemment ? Avez-vous remarqué si certains aliments aggravent la douleur ?";
+            }
+
+            // Cough
+            if (lowerText.includes('tousse') || lowerText.includes('toux')) {
+                return "Une toux persistante peut avoir plusieurs causes. Est-ce une toux sèche ou grasse ? Avez-vous de la fièvre, des difficultés à respirer, ou des douleurs thoraciques ?";
+            }
+
+            // General symptom response
+            if (entities.symptom !== '--') {
+                return `Je note que vous présentez des symptômes de ${entities.symptom.toLowerCase()}${entities.duration !== '--' ? ' depuis ' + entities.duration.toLowerCase() : ''}. Pouvez-vous me décrire plus précisément comment vous vous sentez ? Y a-t-il d'autres symptômes associés ?`;
+            }
+
+            // Greeting/general
+            if (lowerText.includes('bonjour') || lowerText.includes('salut') || lowerText.includes('hello')) {
+                return "Bonjour ! Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me décrire vos symptômes ou à me poser vos questions de santé.";
+            }
+
+            // Default response
+            return "Je vous écoute. Pourriez-vous me donner plus de détails sur ce qui vous préoccupe ? Décrivez-moi vos symptômes, leur durée et leur intensité.";
+        }
+
+        // Process input (from voice or text)
+        async function processInput(text) {
+            const startTime = Date.now();
+            
+            // Show transcription with highlighting
+            document.getElementById('transcription').innerHTML = highlightEntities(text);
+            
+            // Extract entities
+            const entities = extractEntities(text);
+            document.getElementById('entity-symptom').textContent = entities.symptom;
+            document.getElementById('entity-duration').textContent = entities.duration;
+            document.getElementById('entity-location').textContent = entities.location;
+            document.getElementById('entity-intensity').textContent = entities.intensity;
+
+            // Update confidence for text input (simulated high confidence)
+            const confidence = 94 + Math.random() * 5;
+            document.getElementById('confidenceFill').style.width = confidence + '%';
+            document.getElementById('confidenceValue').textContent = confidence.toFixed(1) + '%';
+            document.getElementById('asrAccuracy').textContent = confidence.toFixed(1) + '%';
+
+            // Determine state
+            const state = determineState(text, entities);
+            updateState(state);
+
+            // Update latency metric
+            const latency = Date.now() - startTime + Math.floor(Math.random() * 200) + 100;
+            document.getElementById('latencyMetric').textContent = latency + 'ms';
+
+            // Update entity accuracy (simulated)
+            const entityAcc = 91 + Math.random() * 7;
+            document.getElementById('entityAccuracy').textContent = entityAcc.toFixed(1) + '%';
 
             // Add user message to chat
-            addChatMessage('user', sample.text);
+            addChatMessage('user', text);
 
-            // Mo responds
-            await new Promise(r => setTimeout(r, 800));
-            addChatMessage('mo', sample.response);
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Generate and show response after delay
+            await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
+            
+            removeTypingIndicator();
+            const response = generateResponse(text, entities, state);
+            addChatMessage('mo', response);
         }
 
         function highlightEntities(text) {
-            const entities = ['mal à la tête', 'douleur', 'fièvre', 'tempes', 'estomac', 'doliprane', 'tension', 
-                           'hier soir', 'ce matin', 'deux jours', 'trois ans', 'trente-neuf degrés', '39'];
+            const medicalTerms = [
+                'mal à la tête', 'douleur', 'douleurs', 'fièvre', 'température',
+                'tempe', 'tempes', 'estomac', 'ventre', 'doliprane', 'tension',
+                'hier', 'ce matin', 'cette nuit', 'deux jours', 'trois jours',
+                'une semaine', 'toux', 'tousse', 'rhume', 'nausée', 'vomissement',
+                'fatigue', 'vertige', 'migraine', 'gorge', 'oreille', 'dos',
+                '39', '40', '38', 'degrés', 'ans', 'mois', 'fils', 'fille',
+                'enfant', 'bébé', 'médicament', 'traitement', 'allergie',
+                'respir', 'poitrine', 'cœur', 'sang'
+            ];
+            
             let result = text;
-            entities.forEach(entity => {
-                const regex = new RegExp(`(${entity})`, 'gi');
+            medicalTerms.forEach(term => {
+                const regex = new RegExp(`(${term})`, 'gi');
                 result = result.replace(regex, '<span class="medical-entity">$1</span>');
             });
             return result;
@@ -1082,6 +1483,38 @@
             chat.insertAdjacentHTML('beforeend', messageHtml);
             chat.scrollTop = chat.scrollHeight;
         }
+
+        function showTypingIndicator() {
+            const chat = document.getElementById('chatTranscript');
+            const typingHtml = `
+                <div class="chat-message mo" id="typingIndicator">
+                    <div class="chat-avatar">🤖</div>
+                    <div>
+                        <div class="chat-bubble">
+                            <div class="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chat.insertAdjacentHTML('beforeend', typingHtml);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Initialize metrics
+        document.getElementById('asrAccuracy').textContent = '--';
+        document.getElementById('latencyMetric').textContent = '--';
+        document.getElementById('entityAccuracy').textContent = '--';
     </script>
 </body>
 </html>
